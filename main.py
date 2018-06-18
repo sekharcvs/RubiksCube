@@ -7,8 +7,8 @@ from keras.layers.core import Dense, Dropout
 from keras.utils import np_utils
 
 side = 2
-n_moves = 6
-iterations = 10000
+n_moves = 1
+iterations = 10
 
 N = n_moves * iterations
 
@@ -57,9 +57,9 @@ test_y_offset = y_offset[N - N_te:N, :]
 test_y_direction = y_direction[N - N_te:N, :]
 
 # Solver
-LOAD_MODEL = False
-SAVE_MODEL = True
-UPDATE_MODEL = True
+LOAD_MODEL = True
+SAVE_MODEL = False
+UPDATE_MODEL = False
 
 
 def evaluate(model, test_X, nc):
@@ -74,7 +74,7 @@ def accuracy(true, pred):
 
 # TODO: COnvert to multi-task learning model
 # Axis
-epochs = 20
+epochs = 10
 dense_layer_size = 6 * side * side
 dropout = 0.2
 num_classes = 3 # X, Y, Z
@@ -112,7 +112,7 @@ if UPDATE_MODEL is True:
 
 
 # Offset
-epochs = 20
+epochs = 10
 dense_layer_size = 6 * side * side
 dropout = 0.2
 num_classes = side
@@ -150,7 +150,7 @@ if UPDATE_MODEL is True:
 
 
 # Direction
-epochs = 20
+epochs = 10
 dense_layer_size = 6 * side * side
 dropout = 0.2
 num_classes = 2
@@ -188,5 +188,15 @@ if UPDATE_MODEL is True:
 
 
 # TODO: Test on real rubik's cube and implement all the motions one after another
+for i in range(20):
+    C1 = cube.cube(dim=side, n_moves=n_moves)
+    C1.display()
+    cube1 = C1.cube_states.reshape(n_moves, -1)
 
+    a = model_axis.predict_classes(cube1)
+    o = model_offset.predict_classes(cube1)
+    d = model_direction.predict_classes(cube1)
 
+    C1.moves_shuffle(np.asarray([a,o,d]).transpose())
+
+    C1.display()
