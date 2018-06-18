@@ -210,7 +210,14 @@ class cube:
 
     def isSolved(self):
         # returns whether the cube is solved
-        return
+        solved = True
+        for i in range(6):
+            face = self.cube[i,:,:]
+            val = face[0,0]
+            diff = face - val
+            if np.sum(np.fabs(diff)) != 0:
+                solved = False
+        return solved
 
     def orient(self):
         # Rotate the entire cube in a way that a fixed orientation is preserved
