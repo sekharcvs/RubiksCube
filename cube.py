@@ -128,6 +128,7 @@ class cube:
             self.rotate_turn_counterclockwise(axis)
         return
 
+
     def moveY(self, offset, direction):
         # DO NOT CALL THIS FUNCTION FROM ANYWHERE BUT THE move() ROUTINE!!!!!
         # Does only a 90 degree rotation along Y axis only
@@ -205,7 +206,6 @@ class cube:
         self.moves = np.append(self.moves, [np.asarray([axis,offset,direction])], axis=0)
         self.cube_states = np.append(self.cube_states, [self.cube], axis=0)
         return
-
 
 
     def isSolved(self):
