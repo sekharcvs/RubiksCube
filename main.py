@@ -8,47 +8,18 @@ from keras.layers import Flatten
 from keras.utils import np_utils
 
 
-def encode_moves(moves, side):
-    N = moves.shape[0]
-    move_encodings = np.zeros([N,1])
-    for i in range(N):
-        a = moves[i, 0]
-        o = moves[i, 1]
-        d = moves[i, 2]
-        move_encodings[i] = a * (side * 2) + o * (2) + d
-
-    return move_encodings
-
-
-def decode_moves(move_encodings, side):
-    N = move_encodings.shape[0]
-
-    M = 3*side*2
-
-    moves = np.zeros([N, 3]).astype(np.int)
-    for i in range(N):
-        n = move_encodings[i] % M
-
-        d = n % 2
-        o = np.floor(n/2).astype(np.int) % side
-        a = np.floor(n/(2 * side)).astype(np.int) % 3
-
-        moves[i] = np.asarray([a, o, d]).reshape(1,1,3).astype(np.int)
-    return moves
-
-
 # Common Constants
 side = 2
 n_moves = 2
 num_classes = 3 * side * 2  # Maximum number of possible options per move. 3 Axes, side offsets, 2 directions
 
 # Data Generation/Loading/Saving
-LOAD_DATA = False
-SAVE_DATA = True
+LOAD_DATA = True
+SAVE_DATA = False
 
 if LOAD_DATA is False:
     # Generate Fresh Data
-    iterations = 100000
+    iterations = 10000
     N = n_moves * iterations
 
     X = np.zeros([N, 6, side, side])
@@ -56,16 +27,34 @@ if LOAD_DATA is False:
 
     j = 0
     for i in range(iterations):
-        C = cube.cube(dim=side, n_moves=n_moves)
-        moves = C.moves
-        inverse_moves = C.get_inverse_moves(moves)
-        cube_states = C.cube_states
+        C = cube.CubeObject(dim=side, n_moves=n_moves)
+        moves_list = C.moves_list
+        inverse_moves_list = cube.get_inverse_moves(moves_list)
+        states_list = C.states_list
 
         for m in range(n_moves):
-            X[j] = cube_states[m]
-            y[j] = inverse_moves[m]
+            X[j] = states_list[m]
+            y[j] = inverse_moves_list[m]
             j = j+1
 
+    # Groups equal states - Data clean-up step for better training
+    X, idx, group_id = cube.group_equal_states(X)
+    y = y[idx, :]
+
+    max_group_id = group_id[-1]
+    for id in range(max_group_id):
+        first_idx = np.nonzero(group_id == id)[0][0]
+        last_idx = np.nonzero(group_id == id)[0][-1]
+
+        first_X = X[first_idx].copy()
+        first_y = y[first_idx].copy()
+        for idx in range(first_idx, last_idx+1):
+            # For now removing confusions. Later, add all rotations of first_X
+            # If equivalent states not have equivalent moves, pick the majority move and use that across all permutation
+            X[idx] = first_X
+            y[idx] = first_y
+
+    # TODO: Add all rotations of the cube as training data
     idx = np.random.permutation(N)
     X = X[idx]
     y = y[idx, :]
@@ -101,30 +90,29 @@ if SAVE_DATA is True:
     np.save("test_y", test_y)
 
 # Data Preparation
-train_y = np_utils.to_categorical(encode_moves(train_y, side), num_classes)
-valid_y = np_utils.to_categorical(encode_moves(valid_y, side), num_classes)
-test_y = np_utils.to_categorical(encode_moves(test_y, side), num_classes)
+train_y = np_utils.to_categorical(cube.encode_moves(train_y, side), num_classes)
+valid_y = np_utils.to_categorical(cube.encode_moves(valid_y, side), num_classes)
+test_y = np_utils.to_categorical(cube.encode_moves(test_y, side), num_classes)
 
 
 # Solver
-
 def evaluate(model, test_X, num_classes):
     return np_utils.to_categorical(model.predict_classes(test_X), num_classes)
 
 
 def accuracy(true, pred):
-    a = np.argmax(true, axis = -1)
-    b = np.argmax(pred, axis = -1)
+    a = np.argmax(true, axis=-1)
+    b = np.argmax(pred, axis=-1)
     x = np.equal(a, b)
     return np.mean(x)
 
 
 # Model Setup
-LOAD_MODEL = True
+LOAD_MODEL = False
 SAVE_MODEL = True
 UPDATE_MODEL = True
 
-epochs = 5
+epochs = 1
 dense_layer_size = 512
 dropout = 0.2
 num_classes = num_classes
@@ -168,14 +156,14 @@ if SAVE_MODEL is True:
     model = load_model(model_name)
 
 for i in range(20):
-    C1 = cube.cube(dim=side, n_moves=n_moves)
-    C1.display()
+    C1 = cube.CubeObject(dim=side, n_moves=n_moves)
+    cube.display(C1.state, C1.side, C1.colormap)
     j = 0
 
-    while (C1.isSolved() is False) and (j < 10):
-        cube_state = np.asarray([C1.cube]).astype(np.int)
+    while (cube.isSolved(C1.state) is False) and (j < 10):
+        cube_state = np.asarray([C1.state]).astype(np.int)
         moves_encodings = model.predict_classes(cube_state)
-        moves = decode_moves(moves_encodings, side)
-        C1.moves_shuffle(moves)
-        C1.display()
-        j = j + 1
+        moves = cube.decode_moves(moves_encodings, side)
+        C1.apply_moves(moves)
+        cube.display(C1.state, C1.side, C1.colormap)
+        j = j+1
