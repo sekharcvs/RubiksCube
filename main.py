@@ -10,16 +10,16 @@ from keras.utils import np_utils
 
 # Common Constants
 side = 2
-n_moves = 2
+n_moves = 1
 num_classes = 3 * side * 2  # Maximum number of possible options per move. 3 Axes, side offsets, 2 directions
 
 # Data Generation/Loading/Saving
-LOAD_DATA = True
-SAVE_DATA = False
+LOAD_DATA = False
+SAVE_DATA = True
 
 if LOAD_DATA is False:
     # Generate Fresh Data
-    iterations = 10000
+    iterations = 1000
     N = n_moves * iterations
 
     X = np.zeros([N, 6, side, side])
@@ -41,20 +41,57 @@ if LOAD_DATA is False:
     X, idx, group_id = cube.group_equal_states(X)
     y = y[idx, :]
 
+    # Prune out redundant states, but cover all possible rotations of unique states
     max_group_id = group_id[-1]
+    n_rotations = 1 + 3 * 2 * 3  # Possible unique rotations of the cube including original state
+    N1 = max_group_id * n_rotations
+    X1 = np.zeros([N1, 6, side, side])
+    y1 = np.zeros([N1, 3])
+
+    X2 = X1.copy()
+    y2 = y1.copy()
+
+    X3 = X1.copy()
+    y3 = y1.copy()
+
+    idx = 0
     for id in range(max_group_id):
         first_idx = np.nonzero(group_id == id)[0][0]
-        last_idx = np.nonzero(group_id == id)[0][-1]
 
         first_X = X[first_idx].copy()
         first_y = y[first_idx].copy()
-        for idx in range(first_idx, last_idx+1):
-            # For now removing confusions. Later, add all rotations of first_X
-            # If equivalent states not have equivalent moves, pick the majority move and use that across all permutation
-            X[idx] = first_X
-            y[idx] = first_y
 
-    # TODO: Add all rotations of the cube as training data
+        X1[idx] = first_X
+        y1[idx] = first_y
+
+        # TODO: Remove this later. Have unit tests for move(), rotate(), check_equal_states() and get_move_axis_turns()
+        first_X = np.asarray([[[0., 0.],  [0., 0.]], [[1., 5.],  [1., 5.]], [[2., 2.],  [2., 2.]], [[4., 3.],  [4., 3.]], [[4., 1.], [4., 1.]], [[5., 3.], [5., 3.]]])
+        first_y = np.asarray([2., 1., 1.])
+
+        TEMP = np.zeros([0, 3]).astype(np.int)
+        TEMP1 = np.zeros([0, 6, side, side]).astype(np.int)
+        X2[idx] = cube.move(first_X.astype(np.int), TEMP, TEMP1, side, first_y[0].astype(np.int), first_y[1].astype(np.int), first_y[2].astype(np.int))[0]
+        first_X_moved = X2[idx].copy()
+
+        idx = idx + 1
+        for a in range(3):
+            for d in [-1, 1]:
+                for t in range(1,4):
+                    # For now removing confusions. Later, add all rotations of first_X
+                    # If equivalent states not have equivalent moves, pick the majority move and use that across all permutation
+                    X1[idx] = cube.rotate_cube(first_X, a, d * t)
+                    y1[idx] = cube.get_move_axis_turns(first_y, a, d * t)
+
+                    X2[idx] = first_X_moved
+                    X3[idx] = cube.move(X1[idx].astype(np.int), TEMP, TEMP1, side, y1[idx][0].astype(np.int), y1[idx][1].astype(np.int), y1[idx][2].astype(np.int))[0]
+                    X3[idx] = cube.rotate_cube(X3[idx], a, -d * t)
+                    idx = idx + 1
+
+    N = N1
+    X = X1
+    y = y1
+
+    # Random permutations to shuffle data
     idx = np.random.permutation(N)
     X = X[idx]
     y = y[idx, :]
@@ -112,7 +149,7 @@ LOAD_MODEL = False
 SAVE_MODEL = True
 UPDATE_MODEL = True
 
-epochs = 1
+epochs = 10
 dense_layer_size = 512
 dropout = 0.2
 num_classes = num_classes

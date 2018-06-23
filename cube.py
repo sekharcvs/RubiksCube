@@ -10,6 +10,8 @@ BACK = 3
 TOP = 4
 BOTTOM = 5
 
+PI = 3.1415926
+
 default_map = np.array([[255, 165, 000], [000, 128, 000], [255, 000, 000], [255, 255, 000], [255, 255, 255], [000, 000, 255]]).astype(np.uint8)
 
 
@@ -92,12 +94,85 @@ def check_equal_states(state1, state2):
     return False, np.asarray((0, 0, 0))
 
 
-def get_move_axes_turn(move, axes_turns):
+def get_move_axis_turns(move, axis, n_turns):
     # If a cube state2 is the same as state1 but with rotation of cube according to
-    # axes_turns[:] = [xturns, yturns, zturns] applied on state1, return the
-    # equivalent needed move corresponding to input move on state2
+    # facing the axis and performing n_turns number of anti-clockwise turns
+    # equivalent needed move corresponding to input move on state2 is returned
+    # n_turns can be either positive or negative
+    a = move[0]
+    o = move[1]
+    d = move[2]
 
-    return
+    a1 = a
+    d1 = d
+    if axis == 0:
+        # X-Axis turns
+        # T = (pi/2) * n_turns radians
+        # x = x' (new axis)
+        # y = cos(T) * y' + sin(T) * z'
+        # z = -sin(T) * y' + cos(T) * z'
+
+        if a == 0:
+            a1 = a
+            d1 = d
+        elif a == 1:
+            c = np.round(np.cos(PI * n_turns/2))
+            s = np.round(np.sin(PI * n_turns/2))
+            k = np.round(c*1 + s*2).astype(np.int)
+            a1 = np.abs(k).astype(np.int)
+            d1 = np.sign(k).astype(np.int)
+        else:
+            c = np.round(np.cos(PI * n_turns/2))
+            s = np.round(np.sin(PI * n_turns/2))
+            k = np.round(-s*1 + c*2).astype(np.int)
+            a1 = np.abs(k).astype(np.int)
+            d1 = np.sign(k).astype(np.int)
+    elif axis == 1:
+        # Y-Axis turns
+        # T = (pi/2) * n_turns radians
+        # y = y'
+        # z = cos(T) * z' + sin(T) * x'
+        # x = -sin(T) * z' + cos(T) * x'
+        if a == 1:
+            a1 = a
+            d1 = d
+        elif a == 2:
+            c = np.round(np.cos(PI * n_turns/2))
+            s = np.round(np.sin(PI * n_turns/2))
+            k = np.round(c*2 + s*0).astype(np.int)
+            a1 = np.abs(k).astype(np.int)
+            d1 = np.sign(k).astype(np.int)
+        else:
+            c = np.round(np.cos(PI * n_turns/2))
+            s = np.round(np.sin(PI * n_turns/2))
+            k = np.round(-s*2 + c*0).astype(np.int)
+            a1 = np.abs(k).astype(np.int)
+            d1 = np.sign(k).astype(np.int)
+    else:  # axis == 2
+        # Z-Axis turns
+        # T = (pi/2) * n_turns radians
+        # z = z'
+        # x = cos(T) * x' + sin(T) * y'
+        # y = -sin(T) * x' + cos(T) * y'
+        if a == 2:
+            a1 = a
+            d1 = d
+        elif a == 0:
+            c = np.round(np.cos(PI * n_turns/2))
+            s = np.round(np.sin(PI * n_turns/2))
+            k = np.round(c*0 + s*1).astype(np.int)
+            a1 = np.abs(k).astype(np.int)
+            d1 = np.sign(k).astype(np.int)
+        else:
+            c = np.round(np.cos(PI * n_turns/2))
+            s = np.round(np.sin(PI * n_turns/2))
+            k = np.round(-s*0 + c*1).astype(np.int)
+            a1 = np.abs(k).astype(np.int)
+            d1 = np.sign(k).astype(np.int)
+
+    move_equivalent = np.asarray([a1, o, d1]).astype(np.int)
+
+    return move_equivalent
 
 
 # Low complexity version to group all the equivalent states together
@@ -211,10 +286,10 @@ def rotate_turn_counterclockwise(state, axis):
         temp[RIGHT, :, :] = np.rot90(state[RIGHT, :, :], 3)
     else:
         # Z-Axis
-        temp[LEFT, :, :] = state[TOP, :, :]
-        temp[TOP, :, :] = state[RIGHT, :, :]
-        temp[RIGHT, :, :] = (state[BOTTOM, :, :].transpose())[::-1, ::-1]
-        temp[BOTTOM, :, ::-1] = (state[LEFT, :, :].transpose())[::-1, :]
+        temp[LEFT, :, :] = np.rot90(state[TOP, :, :], 1)
+        temp[TOP, :, :] = np.rot90(state[RIGHT, :, :], 1)
+        temp[RIGHT, :, :] = np.rot90(state[BOTTOM, :, :], 1)
+        temp[BOTTOM, :, :] = np.rot90(state[LEFT, :, :], 1)
 
         temp[FRONT, :, :] = np.rot90(state[FRONT, :, :], 1)
         temp[BACK, :, :] = np.rot90(state[BACK, :, :], 3)
@@ -311,6 +386,7 @@ def move(state, moves_list, states_list, side, axis, offset, direction):
         state = rotate_cube(state, 0, 1)
         state = moveY(state, side, offset, direction)
         state = rotate_cube(state, 0, -1)
+
 
     moves_list, states_list = update_moves_states(state, moves_list, states_list, axis, offset, direction)
 
