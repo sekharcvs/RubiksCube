@@ -11,8 +11,11 @@ TOP = 4
 BOTTOM = 5
 
 PI = 3.1415926
+EPSILON = 1e-5
 
 default_map = np.array([[255, 165, 000], [000, 128, 000], [255, 000, 000], [255, 255, 000], [255, 255, 255], [000, 000, 255]]).astype(np.uint8)
+
+
 
 
 def encode_moves(moves, side):
@@ -38,7 +41,7 @@ def decode_moves(move_encodings, side):
         o = np.floor(n/2).astype(np.int) % side
         a = np.floor(n/(2 * side)).astype(np.int) % 3
 
-        moves[i] = np.asarray([a, o, d]).reshape(1, 1, 3).astype(np.int)
+        moves[i] = np.asarray([a, o, d]).reshape(1, 3).astype(np.int)
     return moves
 
 
@@ -53,8 +56,13 @@ def isSolved(state):
             solved = False
     return solved
 
+def check_exact_equal_arrays(arr1, arr2):
+    check = False
+    if np.sum(np.absolute(arr1 - arr2)) < EPSILON:
+        check = True
+    return check
 
-def check_equal_states(state1, state2):
+def check_equivalent_states(state1, state2):
     for idx1 in range(6):
         flag = False
         face1 = state1[idx1].astype(np.int)
@@ -78,17 +86,17 @@ def check_equal_states(state1, state2):
 
     for xturns in range(3):
         tempStateX = rotate_turn_counterclockwise(tempStateX, 0)
-        if np.sum(np.absolute(tempStateX - state2)) < 0.001:
+        if check_exact_equal_arrays(tempStateX, state2):
             return True, np.asarray((xturns, 0, 0))
         tempStateY = tempStateX.copy()
         for yturns in range(3):
             tempStateY = rotate_turn_counterclockwise(tempStateY, 0)
-            if np.sum(np.absolute(tempStateY - state2)) < 0.001:
+            if check_exact_equal_arrays(tempStateY, state2):
                 return True, np.asarray((xturns, yturns, 0))
             tempStateZ = tempStateY.copy()
             for zturns in range(3):
                 tempStateZ = rotate_turn_counterclockwise(tempStateZ, 0)
-                if np.sum(np.absolute(tempStateZ - state2)) < 0.001:
+                if check_exact_equal_arrays(tempStateZ, state2):
                     return True, np.asarray((xturns, yturns, zturns))
 
     return False, np.asarray((0, 0, 0))
@@ -188,7 +196,7 @@ def group_equal_states(states_list):
         group_found = False
         for gr in range(ngroups):
             refState = (lla[gr])[0]
-            if check_equal_states(refState, tempState)[0] is True:
+            if check_equivalent_states(refState, tempState)[0] is True:
                 lla[gr].append(tempState)
                 lli[gr].append(c)
                 group_found = True
@@ -438,4 +446,8 @@ class CubeObject:
 
     def apply_moves(self, moves):
         self.state, self.moves_list, self.states_list = moves_shuffle(self.state, self.side, moves, self.moves_list, self.states_list)
+
+    def rotate_cube(self, axis, turns):
+        self.state = rotate_cube(self.state, axis, turns)
+
 
