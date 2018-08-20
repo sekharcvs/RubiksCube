@@ -82,103 +82,140 @@ def check_equivalent_states(state1, state2):
         if flag is False:
             return False, np.asarray((0, 0, 0))
 
-    tempStateX = state1.copy()
+    # tempStateX = state1.copy()
+    # for xturns in range(3):
+    #     tempStateX = rotate_turn_counterclockwise(tempStateX, 0)
+    #     if check_exact_equal_arrays(tempStateX, state2):
+    #         return True, np.asarray((xturns, 0, 0))
+    #     tempStateY = tempStateX.copy()
+    #     for yturns in range(3):
+    #         tempStateY = rotate_turn_counterclockwise(tempStateY, 1)
+    #         if check_exact_equal_arrays(tempStateY, state2):
+    #             return True, np.asarray((xturns, yturns, 0))
+    #         tempStateZ = tempStateY.copy()
+    #         for zturns in range(3):
+    #             tempStateZ = rotate_turn_counterclockwise(tempStateZ, 2)
+    #             if check_exact_equal_arrays(tempStateZ, state2):
+    #                 return True, np.asarray((xturns, yturns, zturns))
 
-    for xturns in range(3):
-        tempStateX = rotate_turn_counterclockwise(tempStateX, 0)
-        if check_exact_equal_arrays(tempStateX, state2):
-            return True, np.asarray((xturns, 0, 0))
-        tempStateY = tempStateX.copy()
-        for yturns in range(3):
-            tempStateY = rotate_turn_counterclockwise(tempStateY, 0)
-            if check_exact_equal_arrays(tempStateY, state2):
-                return True, np.asarray((xturns, yturns, 0))
-            tempStateZ = tempStateY.copy()
-            for zturns in range(3):
-                tempStateZ = rotate_turn_counterclockwise(tempStateZ, 0)
-                if check_exact_equal_arrays(tempStateZ, state2):
-                    return True, np.asarray((xturns, yturns, zturns))
+    tempState = state1.copy()
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 0, turns)
+        if check_exact_equal_arrays(tempState, state2):
+            return True
 
-    return False, np.asarray((0, 0, 0))
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 1, 1)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 2, turns)
+        if check_exact_equal_arrays(tempState, state2):
+            return True
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 1, 2)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 0, turns)
+        if check_exact_equal_arrays(tempState, state2):
+            return True
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 1, 3)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 2, turns)
+        if check_exact_equal_arrays(tempState, state2):
+            return True
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 2, 1)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 1, turns)
+        if check_exact_equal_arrays(tempState, state2):
+            return True
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 2, 3)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 1, turns)
+        if check_exact_equal_arrays(tempState, state2):
+            return True
 
 
-def get_move_axis_turns(move, axis, n_turns):
+    #return False, np.asarray((0, 0, 0))
+    return False
+
+
+def get_move_axis_turns(move, side, axis, n_turns):
     # If a cube state2 is the same as state1 but with rotation of cube according to
     # facing the axis and performing n_turns number of anti-clockwise turns
     # equivalent needed move corresponding to input move on state2 is returned
     # n_turns can be either positive or negative
-    a = move[0]
-    o = move[1]
-    d = move[2]
+    a = np.int(move[0])
+    o = np.int(move[1])
+    d = np.int(move[2])
 
-    a1 = a
-    d1 = d
+    side = np.int(side)
+    axis = np.int(axis)
+    n_turns = np.int(n_turns)
+
+    c = np.round(np.cos(PI * n_turns / 2))
+    s = np.round(np.sin(PI * n_turns / 2))
+
+    corr = np.zeros(3)
+
     if axis == 0:
         # X-Axis turns
-        # T = (pi/2) * n_turns radians
-        # x = x' (new axis)
-        # y = cos(T) * y' + sin(T) * z'
-        # z = -sin(T) * y' + cos(T) * z'
-
-        if a == 0:
-            a1 = a
-            d1 = d
-        elif a == 1:
-            c = np.round(np.cos(PI * n_turns/2))
-            s = np.round(np.sin(PI * n_turns/2))
-            k = np.round(c*1 + s*2).astype(np.int)
-            a1 = np.abs(k).astype(np.int)
-            d1 = np.sign(k).astype(np.int)
-        else:
-            c = np.round(np.cos(PI * n_turns/2))
-            s = np.round(np.sin(PI * n_turns/2))
-            k = np.round(-s*1 + c*2).astype(np.int)
-            a1 = np.abs(k).astype(np.int)
-            d1 = np.sign(k).astype(np.int)
+        x = np.array([0, 0])
+        y = np.array([0, -1])
+        z = np.array([-1, 0])
     elif axis == 1:
         # Y-Axis turns
-        # T = (pi/2) * n_turns radians
-        # y = y'
-        # z = cos(T) * z' + sin(T) * x'
-        # x = -sin(T) * z' + cos(T) * x'
-        if a == 1:
-            a1 = a
-            d1 = d
-        elif a == 2:
-            c = np.round(np.cos(PI * n_turns/2))
-            s = np.round(np.sin(PI * n_turns/2))
-            k = np.round(c*2 + s*0).astype(np.int)
-            a1 = np.abs(k).astype(np.int)
-            d1 = np.sign(k).astype(np.int)
-        else:
-            c = np.round(np.cos(PI * n_turns/2))
-            s = np.round(np.sin(PI * n_turns/2))
-            k = np.round(-s*2 + c*0).astype(np.int)
-            a1 = np.abs(k).astype(np.int)
-            d1 = np.sign(k).astype(np.int)
+        x = np.array([1, 0])
+        y = np.array([0, 0])
+        z = np.array([0, 1])
     else:  # axis == 2
         # Z-Axis turns
-        # T = (pi/2) * n_turns radians
-        # z = z'
-        # x = cos(T) * x' + sin(T) * y'
-        # y = -sin(T) * x' + cos(T) * y'
-        if a == 2:
-            a1 = a
-            d1 = d
-        elif a == 0:
-            c = np.round(np.cos(PI * n_turns/2))
-            s = np.round(np.sin(PI * n_turns/2))
-            k = np.round(c*0 + s*1).astype(np.int)
-            a1 = np.abs(k).astype(np.int)
-            d1 = np.sign(k).astype(np.int)
-        else:
-            c = np.round(np.cos(PI * n_turns/2))
-            s = np.round(np.sin(PI * n_turns/2))
-            k = np.round(-s*0 + c*1).astype(np.int)
-            a1 = np.abs(k).astype(np.int)
-            d1 = np.sign(k).astype(np.int)
+        x = np.array([1,0])
+        y = np.array([0,-1])
+        z = np.array([0,0])
 
-    move_equivalent = np.asarray([a1, o, d1]).astype(np.int)
+    if a == 0:
+        v = x
+    elif a == 1:
+        v = y
+    else: # a == 2
+        v = z
+
+    v = v.reshape([2,1])
+    R = np.array([[c, -s], [s, c]])
+    v1 = np.matmul(R, v).reshape(2)
+
+    if a == axis:
+        corr[:] = 0
+        corr[a] = 1
+    else:
+        corr[0] = np.dot(v1, x)
+        corr[1] = np.dot(v1, y)
+        corr[2] = np.dot(v1, z)
+
+    # decide final new axis, offset and direction
+    if np.abs(corr[0]) > EPSILON:
+        a1 = 0
+        c = corr[0]
+    elif (np.abs(corr[1]) > EPSILON):
+        a1 = 1
+        c = corr[1]
+    else:
+        a1 = 2
+        c = corr[2]
+
+    # decide on direction and offset
+    if c >= 0:
+        o1 = o
+        d1 = d
+    else:
+        o1 = side - 1 - o
+        d1 = 1 - d
+    move_equivalent = np.asarray([a1, o1, d1]).astype(np.int)
 
     return move_equivalent
 
@@ -196,7 +233,7 @@ def group_equal_states(states_list):
         group_found = False
         for gr in range(ngroups):
             refState = (lla[gr])[0]
-            if check_equivalent_states(refState, tempState)[0] is True:
+            if check_equivalent_states(refState, tempState) is True:
                 lla[gr].append(tempState)
                 lli[gr].append(c)
                 group_found = True
@@ -314,7 +351,8 @@ def rotate_cube(state, axis, turns):
 
 
 def update_moves_states(state, moves_list, states_list, axis, offset, direction):
-    moves_list = np.append(moves_list, [np.asarray([axis,offset,direction])], axis=0)
+    temp = [np.asarray([axis,offset,direction])]
+    moves_list = np.append(moves_list, temp, axis=0)
     states_list = np.append(states_list, [state], axis=0)
     return moves_list, states_list
 
@@ -407,17 +445,21 @@ def moves_shuffle(state, side, moves, moves_list, states_list):
         axis = moves[i, 0].astype(np.int)
         offset = moves[i, 1].astype(np.int)
         direction = moves[i, 2].astype(np.int)
-        state, moves_list, states_list = move(state, moves_list, states_list, side, axis, offset, direction)
+        state_ = state.copy()
+        state, moves_list, states_list = move(state_, moves_list, states_list, side, axis, offset, direction)
     return state, moves_list, states_list
 
-
-def random_shuffle(state, side, n_moves, moves_list, states_list):
-    moves = np.zeros([n_moves, 3])
+def get_random_moves(side, n_moves=1):
+    moves = np.zeros([n_moves, 3]).astype(np.int)
     for i in range(n_moves):
         axis = np.random.randint(0, 3)
         offset = np.random.randint(0, side)
         direction = np.random.randint(0, 2)
         moves[i, :] = [axis, offset, direction]
+    return moves
+
+def random_shuffle(state, side, n_moves, moves_list, states_list):
+    moves = get_random_moves(side, n_moves)
     state, moves_list, states_list = moves_shuffle(state, side, moves, moves_list, states_list)
     return state, moves_list, states_list
 
