@@ -14,9 +14,9 @@ n_moves_max = 5
 num_classes = 3 * side * 2  # Maximum number of possible options per move. 3 Axes, side offsets, 2 directions
 
 # Data Generation/Loading/Saving
-LOAD_DATA = False # Warning: Because grouping is ideally done on full states as smaller moved states are resolved first for avoiding cycles., Load + Update is not ideal
-UPDATE_DATA = True
-SAVE_DATA = True
+LOAD_DATA = True # Warning: Because grouping is ideally done on full states as smaller moved states are resolved first for avoiding cycles., Load + Update is not ideal
+UPDATE_DATA = False
+SAVE_DATA = False
 
 
 if LOAD_DATA is True:
@@ -202,14 +202,14 @@ def accuracy(true, pred):
 
 # Model Setup
 LOAD_MODEL = True
-SAVE_MODEL = True
-UPDATE_MODEL = True
+SAVE_MODEL = False
+UPDATE_MODEL = False
 
 epochs = 200
 dense_layer_size = 300
 dropout = 0.1
 num_classes = num_classes
-load_model_name = "model_4moves.h5"
+load_model_name = "model_5moves.h5"
 save_model_name = "model_5moves.h5"
 
 model = Sequential()
@@ -244,7 +244,7 @@ if UPDATE_MODEL is True:
                 # save model and update best accuracy
                 max_acc = acc
                 if SAVE_MODEL is True:
-                    model.save(model_name)
+                    model.save(save_model_name)
 
 
 # Test on some real data
@@ -252,16 +252,24 @@ if SAVE_MODEL is True:
     # Get the best model
     model = load_model(save_model_name)
 
-total_count = 0
-solved_count = 0
+
+# Evaluation
+n_moves_low = 1
+n_moves_high = n_moves_max + 1
+
+total_count = np.zeros([n_moves_high])
+solved_count = np.zeros([n_moves_high])
+
 for i in range(5000):
-    total_count = total_count + 1
-    n_moves = np.random.randint(1, n_moves_max+1)
+    n_moves = np.random.randint(n_moves_low, n_moves_high)
+
     C1 = cube.CubeObject(dim=side, n_moves=n_moves)
     # cube.display(C1.state, C1.side, C1.colormap)
-    j = 0
 
-    while (cube.isSolved(C1.state) is False) and (j < 10):
+    total_count[n_moves] = total_count[n_moves] + 1
+
+    j = 0
+    while (cube.isSolved(C1.state) is False) and (j < 21):
         cube_state = np.asarray([C1.state]).astype(np.int)
         moves_encodings = model.predict_classes(cube_state)
         moves = cube.decode_moves(moves_encodings, side)
@@ -270,8 +278,11 @@ for i in range(5000):
         j = j+1
 
     if cube.isSolved(C1.state) is True:
-        solved_count = solved_count + 1
+        solved_count[n_moves] = solved_count[n_moves] + 1
 
-percentage_solved = (100.0 * solved_count) / total_count
-print("Results:\nPercentage Solved: "+str(percentage_solved))
-_ = _
+for i in range(1, n_moves_high):
+    percentage_solved = (100.0 * solved_count[i]) / total_count[i]
+    print("Results:\nPercentage Solved "+str(i)+" moves away: "+str(percentage_solved))
+
+percentage_solved = (100.0 * sum(solved_count)) / sum(total_count)
+print("Results:\nPercentage Solved overall: "+str(percentage_solved))
