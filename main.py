@@ -8,6 +8,7 @@ from keras.layers import Flatten
 from keras.utils import np_utils
 
 
+
 # Common Constants
 side = 2
 n_moves_max = 5
@@ -205,9 +206,9 @@ LOAD_MODEL = True
 SAVE_MODEL = False
 UPDATE_MODEL = False
 
-epochs = 200
+epochs = 10
 dense_layer_size = 300
-dropout = 0.1
+dropout = 0.5
 num_classes = num_classes
 load_model_name = "model_5moves.h5"
 save_model_name = "model_5moves.h5"
@@ -264,7 +265,7 @@ for i in range(5000):
     n_moves = np.random.randint(n_moves_low, n_moves_high)
 
     C1 = cube.CubeObject(dim=side, n_moves=n_moves)
-    # cube.display(C1.state, C1.side, C1.colormap)
+    cube.display(C1.state, C1.side, C1.colormap)
 
     total_count[n_moves] = total_count[n_moves] + 1
 
@@ -274,7 +275,7 @@ for i in range(5000):
         moves_encodings = model.predict_classes(cube_state)
         moves = cube.decode_moves(moves_encodings, side)
         C1.apply_moves(moves)
-        # cube.display(C1.state, C1.side, C1.colormap)
+        cube.display(C1.state, C1.side, C1.colormap)
         j = j+1
 
     if cube.isSolved(C1.state) is True:

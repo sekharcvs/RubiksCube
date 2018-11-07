@@ -12,10 +12,8 @@ BOTTOM = 5
 
 PI = 3.1415926
 EPSILON = 1e-5
-
+# Orange (0), Green (1), Red (2), Yellow (3), White (4), Blue (5)
 default_map = np.array([[255, 165, 000], [000, 128, 000], [255, 000, 000], [255, 255, 000], [255, 255, 255], [000, 000, 255]]).astype(np.uint8)
-
-
 
 
 def encode_moves(moves, side):
@@ -468,7 +466,7 @@ class CubeObject:
     def __init__(self, dim, n_moves=100):
         self.side = dim
         self.area = self.side * self.side
-        # Order: Left,Front,Right,Back,Up,Down - [0,1,2,3,4,5] - [Orange, Green, Red, Blue, White, Yellow]
+        # Order: Left,Front,Right,Back,Up,Down - [0,1,2,3,4,5] - [Orange (0), Green (1), Red (2), Yellow (3), White (4), Blue (5)]
         self.state = np.zeros([6, self.side, self.side]).astype(np.int)
         self.colormap = default_map
         self.moves_list = np.zeros([0, 3]).astype(np.int)
@@ -491,5 +489,10 @@ class CubeObject:
 
     def rotate_cube(self, axis, turns):
         self.state = rotate_cube(self.state, axis, turns)
+
+    def set_state(self, state):
+        self.state = state
+        self.moves_list = np.zeros([0, 3]).astype(np.int)
+        self.states_list = np.zeros([0, 6, self.side, self.side])
 
 
