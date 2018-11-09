@@ -11,7 +11,7 @@ from keras.utils import np_utils
 
 # Common Constants
 side = 2
-n_moves_max = 5
+n_moves_max = 6
 num_classes = 3 * side * 2  # Maximum number of possible options per move. 3 Axes, side offsets, 2 directions
 
 # Data Generation/Loading/Saving
@@ -22,10 +22,10 @@ SAVE_DATA = False
 
 if LOAD_DATA is True:
     # Load Data from pre-saved files
-    train_X = np.load("train_X.npy")
-    train_y = np.load("train_y.npy")
-    valid_X = np.load("valid_X.npy")
-    valid_y = np.load("valid_y.npy")
+    train_X = np.load("train_X_{}.npy".format(n_moves_max))
+    train_y = np.load("train_y_{}.npy".format(n_moves_max))
+    valid_X = np.load("valid_X_{}.npy".format(n_moves_max))
+    valid_y = np.load("valid_y_{}.npy".format(n_moves_max))
 else:
     # Load Data from pre-saved files
     train_X = np.zeros([0, 6, side, side])
@@ -40,7 +40,7 @@ if UPDATE_DATA is True:
     n_moves_start = 1
     n_moves_end = n_moves_max + 1
     for n_moves in range(n_moves_start, n_moves_end):
-        iterations[n_moves] = np.int(n_moves * 1000)
+        iterations[n_moves] = np.int(n_moves * n_moves * 2000)
         # iterations[n_moves_max] = 10
         N = N + n_moves * iterations[n_moves]
 
@@ -51,6 +51,7 @@ if UPDATE_DATA is True:
 
     j = 0
     for n_moves in range(n_moves_start, n_moves_end):
+        print("Creating Random Moves: "+str(n_moves))
         for i in range(int(iterations[n_moves])):
             C = cube.CubeObject(dim=side, n_moves=n_moves)
             moves_list = C.moves_list
@@ -75,6 +76,7 @@ if UPDATE_DATA is True:
 
     idx = 0
     for id in range(max_group_id):
+        print("Generating Equivalent States: "+str(id)+" out of "+str(max_group_id)+" groups")
         first_idx = np.nonzero(group_id == id)[0][0]
 
         first_X = X[first_idx].copy()
@@ -180,10 +182,10 @@ if UPDATE_DATA is True:
     valid_y = np.append(valid_y, y[N_tr:N, :], axis=0)
 
 if SAVE_DATA is True:
-    np.save("train_X", train_X)
-    np.save("train_y", train_y)
-    np.save("valid_X", valid_X)
-    np.save("valid_y", valid_y)
+    np.save("train_X_{}".format(n_moves_max), train_X)
+    np.save("train_y_{}".format(n_moves_max), train_y)
+    np.save("valid_X_{}".format(n_moves_max), valid_X)
+    np.save("valid_y_{}".format(n_moves_max), valid_y)
 
 # Data Preparation
 train_y = np_utils.to_categorical(cube.encode_moves(train_y, side), num_classes)
@@ -203,23 +205,20 @@ def accuracy(true, pred):
 
 # Model Setup
 LOAD_MODEL = True
-SAVE_MODEL = False
-UPDATE_MODEL = False
+SAVE_MODEL = True
+UPDATE_MODEL = True
 
-epochs = 10
+epochs = 200
 dense_layer_size = 300
-dropout = 0.5
+dropout = 0.0
 num_classes = num_classes
-load_model_name = "model_5moves.h5"
-save_model_name = "model_5moves.h5"
+load_model_name = "model_{}moves.h5".format(n_moves_max)
+save_model_name = "model_{}moves.h5".format(n_moves_max)
 
 model = Sequential()
 model.add(Flatten(input_shape=(6, side, side)))
 
 # Fully connected layers
-model.add(Dense(dense_layer_size, activation='relu'))
-model.add(Dropout(dropout))
-
 model.add(Dense(dense_layer_size, activation='relu'))
 model.add(Dropout(dropout))
 
@@ -236,11 +235,13 @@ if LOAD_MODEL is True:
 
 output_onehot = evaluate(model, valid_X, num_classes)
 max_acc = accuracy(valid_y, output_onehot)
+print("Epoch 0 acc "+str(max_acc))
 if UPDATE_MODEL is True:
     for count in range(epochs):
         model.fit(train_X, train_y, epochs=1, verbose=1)
         acc = accuracy(valid_y, evaluate(model, valid_X, num_classes))
-        if acc >= max_acc:
+        print("Epoch "+str(count)+" acc "+str(acc))
+        if acc >= max_acc or True: ########## Always updating model ##########
                 print("max accuracy improved to "+str(acc)+"! Best model updated...")
                 # save model and update best accuracy
                 max_acc = acc
@@ -265,7 +266,7 @@ for i in range(5000):
     n_moves = np.random.randint(n_moves_low, n_moves_high)
 
     C1 = cube.CubeObject(dim=side, n_moves=n_moves)
-    cube.display(C1.state, C1.side, C1.colormap)
+    #cube.display(C1.state, C1.side, C1.colormap)
 
     total_count[n_moves] = total_count[n_moves] + 1
 
@@ -275,7 +276,7 @@ for i in range(5000):
         moves_encodings = model.predict_classes(cube_state)
         moves = cube.decode_moves(moves_encodings, side)
         C1.apply_moves(moves)
-        cube.display(C1.state, C1.side, C1.colormap)
+        #cube.display(C1.state, C1.side, C1.colormap)
         j = j+1
 
     if cube.isSolved(C1.state) is True:

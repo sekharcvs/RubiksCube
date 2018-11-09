@@ -21,7 +21,7 @@ model = load_model(model_name)
 
 C1 = cube.CubeObject(dim=side, n_moves=n_moves)
 C1.set_state(initial_state)
-cube.display(C1.state, C1.side, C1.colormap)
+#cube.display(C1.state, C1.side, C1.colormap)
 j = 0
 moves_list = []
 while (cube.isSolved(C1.state) is False) and (j < 21):
@@ -30,7 +30,7 @@ while (cube.isSolved(C1.state) is False) and (j < 21):
     moves = cube.decode_moves(moves_encodings, side)
     moves_list = moves_list + [moves]
     C1.apply_moves(moves)
-    cube.display(C1.state, C1.side, C1.colormap)
+    #cube.display(C1.state, C1.side, C1.colormap)
     j = j + 1
 
 print(moves_list)

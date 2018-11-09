@@ -1,7 +1,7 @@
 import numpy as np
 # from matplotlib import pyplot as plt
 # import time
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 FRONT = 1
 LEFT = 0
@@ -227,6 +227,7 @@ def group_equal_states(states_list):
     # times = np.zeros([n_states, 1])
     # times[0] = time.time()
     for c in range(1, n_states):
+        print("Grouping state: "+str(c)+" out of "+str(n_states)+" states")
         tempState = states_list[c]
         group_found = False
         for gr in range(ngroups):
@@ -288,11 +289,11 @@ def display(state, side, colormap=default_map):
                 for k in range(startx, startx + side):
                     x[j, k, :] = colormap[state[i, j - starty, k - startx]]
 
-    plt.imshow(x)
-    ax = plt.gca()
-    ax.set_xticks(np.arange(-.5, 4 * side, 1))
-    ax.set_yticks(np.arange(-.5, 3 * side, 1))
-    ax.grid(color='k', linestyle='-', linewidth=2)
+    #plt.imshow(x)
+    #ax = plt.gca()
+    #ax.set_xticks(np.arange(-.5, 4 * side, 1))
+    #ax.set_yticks(np.arange(-.5, 3 * side, 1))
+    #ax.grid(color='k', linestyle='-', linewidth=2)
 
     return
 
