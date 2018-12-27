@@ -1,5 +1,6 @@
 import numpy as np
-# from matplotlib import pyplot as plt
+import random
+from matplotlib import pyplot as plt
 # import time
 #import matplotlib.pyplot as plt
 
@@ -462,6 +463,29 @@ def random_shuffle(state, side, n_moves, moves_list, states_list):
     state, moves_list, states_list = moves_shuffle(state, side, moves, moves_list, states_list)
     return state, moves_list, states_list
 
+# Q-Network specific functions
+def get_reward(new_state):
+    solved_reward = 100
+    unsolved_reward = -1
+    reward = unsolved_reward
+    if isSolved(new_state) is True:
+        reward = solved_reward
+    return reward
+
+# Q-Learning specific functions
+def method_existence_numpy_arrays(list, elem):
+    for i in range(len(list)):
+        if np.array_equal(elem, list[i]) is True:
+            return True
+    return False
+
+def method_index_numpy_arrays(list, elem):
+    for i in range(len(list)):
+        if np.array_equal(elem, list[i]) is True:
+        #if check_equivalent_states(elem, list[i]) is True:
+            return i
+    return -1
+###############################
 
 class CubeObject:
     def __init__(self, dim, n_moves=100):
@@ -473,11 +497,20 @@ class CubeObject:
         self.moves_list = np.zeros([0, 3]).astype(np.int)
         self.states_list = np.zeros([0, 6, self.side, self.side])
 
+        # Q-Learning specific parameters
+        self.method_existence = method_existence_numpy_arrays
+        self.method_index = method_index_numpy_arrays
+
         for i in range(6):
             # Initialize a solved cube
             # Top face is 0, side faces are 1-4
             # Bottom face is 5
             self.state[i, :, :] = i
+
+        axis = random.choice([0,1,2])
+        turns = random.choice([0,1,2,3])
+
+        self.rotate_cube(axis, turns)
 
         self.state, self.moves_list, self.states_list = random_shuffle(self.state, self.side, n_moves, self.moves_list, self.states_list)
 
@@ -495,5 +528,17 @@ class CubeObject:
         self.state = state
         self.moves_list = np.zeros([0, 3]).astype(np.int)
         self.states_list = np.zeros([0, 6, self.side, self.side])
+
+    # Q-Learning specific functions
+    def get_observation(self):
+        return self.state
+    def is_terminal_state(self):
+        return isSolved(self.state)
+    def apply_action(self, action_idx):
+        moves = decode_moves(np.asarray([action_idx]), self.side)
+        self.apply_moves(moves)
+        new_state = self.state
+        return new_state, get_reward(new_state)
+
 
 
