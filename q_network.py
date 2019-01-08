@@ -83,10 +83,10 @@ def get_best_action_observation(q_table, state_obs_list, obs):
     state = state_obs_list.index(obs)
     return get_best_action_state(q_table, state)
 
-def get_q_network_obj(model_name):
+def load_network(model_name):
     return pickle.load(open(model_name, 'rb'))
 
-def dump_q_network(q_network_object, model_name):
+def save_network(q_network_object, model_name):
     pickle.dump(q_network_object, open(model_name, 'wb'))
 
 class q_network:

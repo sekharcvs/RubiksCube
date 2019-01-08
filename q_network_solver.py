@@ -18,10 +18,10 @@ def get_action(obs, qnetwork_obj):
         n_actions = qnetwork_obj.n_actions
         return random.randrange(0, n_actions - 1), False
 
-def q_network_step(obs, qnetwork_obj = -1):
+def network_step(obs, qnetwork_obj = -1):
     # Load Default Network if nothing specified
     if qnetwork_obj == -1:
-        qnetwork_obj = q_network.get_q_network_obj(DEFAULT_MODEL_NAME)
+        qnetwork_obj = q_network.load_network(DEFAULT_MODEL_NAME)
 
     action_idx, does_state_exist = get_action(obs, qnetwork_obj)
 

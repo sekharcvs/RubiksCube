@@ -500,6 +500,7 @@ class CubeObject:
         # Q-Learning specific parameters
         self.method_existence = method_existence_numpy_arrays
         self.method_index = method_index_numpy_arrays
+        self.n_actions = 3 * self.side * 2
 
         for i in range(6):
             # Initialize a solved cube
@@ -531,14 +532,14 @@ class CubeObject:
 
     # Q-Learning specific functions
     def get_observation(self):
-        return self.state
+        return np.reshape(self.state, -1)
     def is_terminal_state(self):
         return isSolved(self.state)
     def apply_action(self, action_idx):
         moves = decode_moves(np.asarray([action_idx]), self.side)
         self.apply_moves(moves)
-        new_state = self.state
-        return new_state, get_reward(new_state)
+        new_state = self.get_observation()
+        return new_state, get_reward(self.state)
 
 
 
