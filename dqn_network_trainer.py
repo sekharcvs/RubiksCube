@@ -40,31 +40,33 @@ import evaluate_model
 
 PRINT_DIAG = True
 
-LOAD_NETWORK = False
-SAVE_NETWORK = False
+LOAD_NETWORK = True
+SAVE_NETWORK = True
 UPDATE_NETWORK = True
 
-LOAD_NETWORK_NAME = "DQN_2STEP_5000_episodes.pickle"
-SAVE_NETWORK_NAME = "DQN_2STEP_20000_episodes.pickle"
+LOAD_NETWORK_NAME = "final_network.pickle"
+SAVE_NETWORK_NAME = "final_network.pickle"
 
 ## Q-network specific parameters ##
-EPSILON_START = 0.0 # Explore 50% of the time
-EPSILON_END = 0.05 # Greedy policy
-N_EPISODES = 15000 # Total Number of episodes to be run
-TRAIN_PER_EPISODES = 200 # Training epoch run after collecting this many episodic data
+EPSILON_START = 0 # Explore 50% of the time
+EPSILON_END = 0.01
+# Greedy policy
+N_EPISODES = 200000 # Total Number of episodes to be run
+TRAIN_PER_EPISODES = 500 # Training epoch run after collecting this many episodic data
+N_EPOCHS_PER_UPDATE = 20
 
 
-LEARNING_RATE = 0.01 # Q-Network trainer learning_rate
+LEARNING_RATE = 0.0125 # Q-Network trainer learning_rate
 DISCOUNT_FACTOR = 0.99 # Q-Network trainer discount_factor
 
 # Set n_steps_episode_max = -1 for an episode structure which doesnt terminate in fixed moves count but terminates in a state
-N_STEPS_EPISODE_MAX = 20 # Max number of steps taken per episode.
+N_STEPS_EPISODE_MAX = 2 # Max number of steps taken per episode.
 
 ###################################################
 
 ## Environment to Q-Network interface parameters ##
 SIDE = 2
-N_MOVES_AWAY_MAX = N_STEPS_EPISODE_MAX
+N_MOVES_AWAY_MAX = 1
 ###################################################
 
 
@@ -91,6 +93,11 @@ def reset_env():
 
 
 ## Q Network specific functions ##
+def epsilon_control_algo(eps_start, eps_end, episode_max, episode):
+    eps = eps_start + (eps_end - eps_start) * (episode)/episode_max
+    lower = min(eps_start, eps_end)
+    upper = max(eps_start, eps_end)
+    return max(min(eps, upper), lower)
 
 def run_episode(q_network_obj, epsilon=1):
     # Set Parameters ##
@@ -123,9 +130,12 @@ def run_episode(q_network_obj, epsilon=1):
 
     return state_action_reward_list
 
-def update_q_table(dqn_network_obj, state_action_reward_list, alpha, gamma):
+def train_network(dqn_network_obj, state_action_reward_list, alpha, gamma):
     # Form Input and output lists
     N = len(state_action_reward_list)
+
+    nflips = 0
+    n_epochs = N_EPOCHS_PER_UPDATE
 
     for i in range(len(state_action_reward_list)):
         s0 = state_action_reward_list[i][0]
@@ -137,7 +147,9 @@ def update_q_table(dqn_network_obj, state_action_reward_list, alpha, gamma):
         _, Q = dqn_network.policy(dqn_network_obj, np.reshape(s1, (1, -1)), 1)
         Q = Q[0]
         V_s1 = max(Q)
-        y_ = Q
+        _, Q_current = dqn_network.policy(dqn_network_obj, np.reshape(s0, (1, -1)), 1)
+        Q_current = Q_current[0]
+        y_ = Q_current.copy()
         y_[a] = r + gamma * V_s1
 
         if i == 0:
@@ -146,9 +158,16 @@ def update_q_table(dqn_network_obj, state_action_reward_list, alpha, gamma):
         X[i] = X_
         y[i] = y_
 
+        a_old = np.argmax(Q_current)
+        a_new = np.argmax(y_)
 
+        if a_old != a_new:
+            nflips = nflips+1
 
-    dqn_network.train_op(dqn_network_obj, X, y, alpha)
+    error = (100.0*nflips)/len(state_action_reward_list)
+    print("Average error seen during training epoch: {}".format(error))
+
+    dqn_network.train_op(dqn_network_obj, X, y, alpha, n_epochs)
 
 
 
@@ -181,13 +200,18 @@ def run():
     else:
         dqn_network_obj = dqn_network.load_network(load_network_name)
 
+    dqn_network.save_network(dqn_network_obj, 'temp_validation_network.pickle')
+    best_solved_percentage = evaluate_model.run('temp_validation_network.pickle')
+
+    print("episode: {}, epsilon: {}, alpha: {}, solved_percentage: {}, best_solved_percentage until now: {}".format(-1, "N/A", "N/A", best_solved_percentage, best_solved_percentage))
+
     if update_network is True:
         # Run episodes
         state_action_reward_list = []
         for episode in range(n_episodes):
-            epsilon = dqn_network.epsilon_control_algo(epsilon_start, epsilon_end, n_episodes, episode)
+            epsilon = epsilon_control_algo(epsilon_start, epsilon_end, n_episodes, episode)
             gamma = gamma_default
-            alpha = alpha_default
+            alpha = alpha_default * (1 - (episode/float(n_episodes)))
 
             if episode % train_per_episodes == 0:
                 # Reset training data every train_per_episodes episodes including 0th episode
@@ -197,12 +221,31 @@ def run():
 
             if episode % train_per_episodes == (train_per_episodes - 1):
                 # Run training epoch after collecting train_per_episodes episodic data
-                update_q_table(dqn_network_obj, state_action_reward_list, alpha, gamma)
+                train_network(dqn_network_obj, state_action_reward_list, alpha, gamma)
                 dqn_network.save_network(dqn_network_obj, 'temp_validation_network.pickle')
-                evaluate_model.run('temp_validation_network.pickle')
+                solved_percentage = evaluate_model.run('temp_validation_network.pickle')
+                print("episode: {}, epsilon: {}, alpha: {}, solved_percentage: {}, best_solved_percentage until now: {}".format(episode, epsilon, alpha,
+                                                                                          solved_percentage, best_solved_percentage))
+
+                if solved_percentage > best_solved_percentage:
+                    print("Update Saved Network!")
+                    best_solved_percentage = solved_percentage
+                    if save_network is True:
+                        dqn_network.save_network(dqn_network_obj, save_network_name)
+
 
     if save_network is True:
-        dqn_network.save_network(dqn_network_obj, save_network_name)
+        dqn_network.save_network(dqn_network_obj, 'temp_validation_network.pickle')
+        solved_percentage = evaluate_model.run('temp_validation_network.pickle')
+        print(
+            "episode: {}, epsilon: {}, alpha: {}, solved_percentage: {}, best_solved_percentage until now: {}".format(episode, epsilon,
+                                                                                                            alpha,
+                                                                                                            solved_percentage,
+                                                                                                            best_solved_percentage))
+        if solved_percentage > best_solved_percentage:
+            print("Update Saved Network!")
+            best_solved_percentage = solved_percentage
+            dqn_network.save_network(dqn_network_obj, save_network_name)
 
 if __name__ == "__main__":
     run()

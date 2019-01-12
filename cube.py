@@ -311,7 +311,9 @@ def get_inverse_moves(moves):
 
 def rotate_turn_counterclockwise(state, axis):
     temp = np.zeros(state.shape).astype(np.int)
+    side = state.shape[1]
     if axis == 1:
+    #if True:
         # Y-Axis
         temp[LEFT, :, :] = state[BACK, :, :]
         temp[FRONT, :, :] = state[LEFT, :, :]
@@ -321,6 +323,7 @@ def rotate_turn_counterclockwise(state, axis):
         temp[TOP, :, :] = np.rot90(state[TOP, :, :], 1)
         temp[BOTTOM, :, :] = np.rot90(state[BOTTOM, :, :], 3)
     elif axis == 0:
+    #elif False:
         # X-Axis
         temp[BACK, :, :] = state[TOP, ::-1, ::-1]
         temp[TOP, :, :] = state[FRONT, :, :]
@@ -350,11 +353,108 @@ def rotate_cube(state, axis, turns):
     return state
 
 
-def update_moves_states(state, moves_list, states_list, axis, offset, direction):
-    temp = [np.asarray([axis,offset,direction])]
-    moves_list = np.append(moves_list, temp, axis=0)
-    states_list = np.append(states_list, [state], axis=0)
-    return moves_list, states_list
+# def update_moves_states(state, moves_list, states_list, axis, offset, direction):
+#     temp = [np.asarray([axis,offset,direction])]
+#     moves_list = np.append(moves_list, temp, axis=0)
+#     states_list = np.append(states_list, [state], axis=0)
+#     return moves_list, states_list
+
+def moveZ(state, side, offset, direction):
+    # DO NOT CALL THIS FUNCTION FROM ANYWHERE BUT THE move() ROUTINE!!!!!
+    # Does only a 90 degree rotation along Z axis only
+    # Direction - 0 (Clockwise when looking along that axes), 1 (Anti-Clockwise)
+    # Standard Right hand axes convention. X (-->) Y (V - downward) Z (x - Into the plane).
+    # For any face, (0,0) is always the top left according to the figure in:
+    # https://ruwix.com/the-rubiks-cube/japanese-western-color-schemes/
+    # Offset is the offset from the face that comes first along that axis - ex: offset 0 for Y Axis is TOP
+
+    # Faces
+    if offset == 0 or offset == side - 1:
+        # Along with sides, even face needs rotation
+        if offset == 0:
+            face = FRONT
+            f = state[face, :, :]
+            if direction == 1:
+                f1 = np.rot90(f, 1)  # 90 degrees anti-clockwise
+            else:
+                f1 = np.rot90(f, 3)  # 270 degrees anti-clockwise
+        else:
+            face = BACK
+            f = state[face, :, :]
+            if direction == 1:
+                f1 = np.rot90(f, 3)  # 270 degrees anti-clockwise
+            else:
+                f1 = np.rot90(f, 1)  # 90 degrees anti-clockwise
+        state[face, :, :] = f1
+
+    # Sides
+    a = state[TOP, offset, :].copy()
+    b = state[LEFT, ::-1, side - offset - 1].copy()
+    c = state[BOTTOM,  offset, ::-1].copy()
+    d = state[RIGHT,  :, offset].copy()
+
+    if direction == 1:
+        # Anti-clockwise
+        state[TOP, offset, :] = d
+        state[LEFT, ::-1, side - offset - 1] = a
+        state[BOTTOM,  offset, ::-1] = b
+        state[RIGHT,  :, offset] = c
+    else:
+        # Positive
+        state[TOP, offset, :] = b
+        state[LEFT, ::-1, side - offset - 1] = c
+        state[BOTTOM,  offset, ::-1] = d
+        state[RIGHT,  :, offset] = a
+
+    return state
+
+def moveX(state, side, offset, direction):
+    # DO NOT CALL THIS FUNCTION FROM ANYWHERE BUT THE move() ROUTINE!!!!!
+    # Does only a 90 degree rotation along X axis only
+    # Direction - 0 (Clockwise when looking along that axes), 1 (Anti-Clockwise)
+    # Standard Right hand axes convention. X (-->) Y (V - downward) Z (x - Into the plane).
+    # For any face, (0,0) is always the top left according to the figure in:
+    # https://ruwix.com/the-rubiks-cube/japanese-western-color-schemes/
+    # Offset is the offset from the face that comes first along that axis - ex: offset 0 for Y Axis is TOP
+
+    # Faces
+    if offset == 0 or offset == side - 1:
+        # Along with sides, even face needs rotation
+        if offset == 0:
+            face = LEFT
+            f = state[face, :, :]
+            if direction == 1:
+                f1 = np.rot90(f, 1)  # 90 degrees anti-clockwise
+            else:
+                f1 = np.rot90(f, 3)  # 270 degrees anti-clockwise
+        else:
+            face = RIGHT
+            f = state[face, :, :]
+            if direction == 1:
+                f1 = np.rot90(f, 3)  # 270 degrees anti-clockwise
+            else:
+                f1 = np.rot90(f, 1)  # 90 degrees anti-clockwise
+        state[face, :, :] = f1
+
+    # Sides
+    a = state[FRONT, :, offset].copy()
+    b = state[TOP, :, offset].copy()
+    c = state[BACK,  ::-1, side - offset - 1].copy()
+    d = state[BOTTOM, :, offset].copy()
+
+    if direction == 1:
+        # Anti-clockwise
+        state[FRONT, :, offset] = d
+        state[TOP, :, offset] = a
+        state[BACK, ::-1, side - offset - 1] = b
+        state[BOTTOM, :, offset] = c
+    else:
+        # Positive
+        state[FRONT, :, offset] = b
+        state[TOP, :, offset] = c
+        state[BACK, ::-1, side - offset - 1] = d
+        state[BOTTOM, :, offset] = a
+    return state
 
 
 def moveY(state, side, offset, direction):
@@ -406,8 +506,7 @@ def moveY(state, side, offset, direction):
 
     return state
 
-
-def move(state, moves_list, states_list, side, axis, offset, direction):
+def move(state, side, axis, offset, direction):
     # Does only a 90 degree rotation
     # Direction - 0 (Clockwise when looking along that axes), 1 (Anti-Clockwise)
     # Standard Right hand axes convention. X (-->) Y (V - downward) Z (x - Into the plane).
@@ -418,36 +517,81 @@ def move(state, moves_list, states_list, side, axis, offset, direction):
 
     # Use Y axis rotation and cube rotations as basis
     if axis == 1:
+    #if True:
         # Y-Axis
         state = moveY(state, side, offset, direction)
     if axis == 0:
+    #if False:
         # X-Axis
-        state = rotate_cube(state, 1, 1)
-        state = rotate_cube(state, 0, 1)
-        state = moveY(state, side, offset, direction)
-        state = rotate_cube(state, 0, -1)
-        state = rotate_cube(state, 1, -1)
+        # state = rotate_cube(state, 1, 1)
+        # state = rotate_cube(state, 0, 1)
+        # state = moveY(state, side, offset, direction)
+        # state = rotate_cube(state, 0, -1)
+        # state = rotate_cube(state, 1, -1)
+        state = moveX(state, side, offset, direction)
     if axis == 2:
+    #if False:
         # Z-Axis
-        state = rotate_cube(state, 0, 1)
-        state = moveY(state, side, offset, direction)
-        state = rotate_cube(state, 0, -1)
+        # state = rotate_cube(state, 0, 1)
+        # state = moveY(state, side, offset, direction)
+        # state = rotate_cube(state, 0, -1)
+        state = moveZ(state, side, offset, direction)
 
 
-    moves_list, states_list = update_moves_states(state, moves_list, states_list, axis, offset, direction)
+    #moves_list, states_list = update_moves_states(state, moves_list, states_list, axis, offset, direction)
 
-    return state, moves_list, states_list
+    return state
 
+# def move(state, moves_list, states_list, side, axis, offset, direction):
+#     # Does only a 90 degree rotation
+#     # Direction - 0 (Clockwise when looking along that axes), 1 (Anti-Clockwise)
+#     # Standard Right hand axes convention. X (-->) Y (V - downward) Z (x - Into the plane).
+#     # For any face, (0,0) is always the top left according to the figure in:
+#     # https://ruwix.com/the-rubiks-cube/japanese-western-color-schemes/
+#     # Offset is the offset from the face that comes first along that axis - ex: offset 0 for Y Axis is TOP
+#     # Updates the moves buffer and cube_states
+#
+#     # Use Y axis rotation and cube rotations as basis
+#     if axis == 1:
+#         # Y-Axis
+#         state = moveY(state, side, offset, direction)
+#     if axis == 0:
+#         # X-Axis
+#         state = rotate_cube(state, 1, 1)
+#         state = rotate_cube(state, 0, 1)
+#         state = moveY(state, side, offset, direction)
+#         state = rotate_cube(state, 0, -1)
+#         state = rotate_cube(state, 1, -1)
+#     if axis == 2:
+#         # Z-Axis
+#         state = rotate_cube(state, 0, 1)
+#         state = moveY(state, side, offset, direction)
+#         state = rotate_cube(state, 0, -1)
+#
+#
+#     moves_list, states_list = update_moves_states(state, moves_list, states_list, axis, offset, direction)
+#
+#     return state, moves_list, states_list
 
-def moves_shuffle(state, side, moves, moves_list, states_list):
+def moves_shuffle(state, side, moves):
     n_moves = moves.shape[0]
     for i in range(n_moves):
         axis = moves[i, 0].astype(np.int)
         offset = moves[i, 1].astype(np.int)
         direction = moves[i, 2].astype(np.int)
-        state_ = state.copy()
-        state, moves_list, states_list = move(state_, moves_list, states_list, side, axis, offset, direction)
-    return state, moves_list, states_list
+        #state_ = state.copy()
+        #state = move(state_, side, axis, offset, direction)
+    return move(state, side, axis, offset, direction)
+
+# def moves_shuffle(state, side, moves, moves_list, states_list):
+#     n_moves = moves.shape[0]
+#     for i in range(n_moves):
+#         axis = moves[i, 0].astype(np.int)
+#         offset = moves[i, 1].astype(np.int)
+#         direction = moves[i, 2].astype(np.int)
+#         state_ = state.copy()
+#         state, moves_list, states_list = move(state_, moves_list, states_list, side, axis, offset, direction)
+#     return state, moves_list, states_list
 
 def get_random_moves(side, n_moves=1):
     moves = np.zeros([n_moves, 3]).astype(np.int)
@@ -458,15 +602,21 @@ def get_random_moves(side, n_moves=1):
         moves[i, :] = [axis, offset, direction]
     return moves
 
-def random_shuffle(state, side, n_moves, moves_list, states_list):
+# def random_shuffle(state, side, n_moves, moves_list, states_list):
+#     moves = get_random_moves(side, n_moves)
+#     state, moves_list, states_list = moves_shuffle(state, side, moves, moves_list, states_list)
+#     return state, moves_list, states_list
+
+def random_shuffle(state, side, n_moves):
     moves = get_random_moves(side, n_moves)
-    state, moves_list, states_list = moves_shuffle(state, side, moves, moves_list, states_list)
-    return state, moves_list, states_list
+    #state, moves_list, states_list = moves_shuffle(state, side, moves)
+    state = moves_shuffle(state, side, moves)
+    return state
 
 # Q-Network specific functions
 def get_reward(new_state):
-    solved_reward = 100
-    unsolved_reward = -1
+    solved_reward = 1
+    unsolved_reward = 0.01
     reward = unsolved_reward
     if isSolved(new_state) is True:
         reward = solved_reward
@@ -494,52 +644,58 @@ class CubeObject:
         # Order: Left,Front,Right,Back,Up,Down - [0,1,2,3,4,5] - [Orange (0), Green (1), Red (2), Yellow (3), White (4), Blue (5)]
         self.state = np.zeros([6, self.side, self.side]).astype(np.int)
         self.colormap = default_map
-        self.moves_list = np.zeros([0, 3]).astype(np.int)
-        self.states_list = np.zeros([0, 6, self.side, self.side])
+        #self.moves_list = np.zeros([0, 3]).astype(np.int)
+        #self.states_list = np.zeros([0, 6, self.side, self.side])
 
         # Q-Learning specific parameters
         self.method_existence = method_existence_numpy_arrays
         self.method_index = method_index_numpy_arrays
         self.n_actions = 3 * self.side * 2
 
-        for i in range(6):
-            # Initialize a solved cube
-            # Top face is 0, side faces are 1-4
-            # Bottom face is 5
-            self.state[i, :, :] = i
+        self.set_solved_n_moves_away(n_moves=n_moves)
 
-        axis = random.choice([0,1,2])
-        turns = random.choice([0,1,2,3])
-
-        self.rotate_cube(axis, turns)
-
-        self.state, self.moves_list, self.states_list = random_shuffle(self.state, self.side, n_moves, self.moves_list, self.states_list)
-
-    def update_lists(self, moves_list, states_list):
-        self.moves_list = moves_list
-        self.states_list = states_list
+    #def update_lists(self, moves_list, states_list):
+    #    self.moves_list = moves_list
+    #    self.states_list = states_list
 
     def apply_moves(self, moves):
-        self.state, self.moves_list, self.states_list = moves_shuffle(self.state, self.side, moves, self.moves_list, self.states_list)
+        #self.state, self.moves_list, self.states_list = moves_shuffle(self.state, self.side, moves, self.moves_list, self.states_list)
+        self.state = moves_shuffle(self.state, self.side, moves)
 
     def rotate_cube(self, axis, turns):
         self.state = rotate_cube(self.state, axis, turns)
 
     def set_state(self, state):
         self.state = state
-        self.moves_list = np.zeros([0, 3]).astype(np.int)
-        self.states_list = np.zeros([0, 6, self.side, self.side])
+        #self.moves_list = np.zeros([0, 3]).astype(np.int)
+        #self.states_list = np.zeros([0, 6, self.side, self.side])
+
+    def set_solved_n_moves_away(self, n_moves=0):
+        for i in range(6):
+            # Initialize a solved cube
+            # Top face is 0, side faces are 1-4
+            # Bottom face is 5
+            self.state[i, :, :] = i
+
+        # Randomly rotate
+        axis = random.choice([0,1,2])
+        turns = random.choice([0,1,2,3])
+        self.rotate_cube(axis, turns)
+
+        #self.state, self.moves_list, self.states_list = random_shuffle(self.state, self.side, n_moves, self.moves_list, self.states_list)
+        self.state = random_shuffle(self.state, self.side, n_moves)
+
 
     # Q-Learning specific functions
     def get_observation(self):
-        return np.reshape(self.state, -1)
+        return np.reshape(self.state, -1).copy()
     def is_terminal_state(self):
         return isSolved(self.state)
     def apply_action(self, action_idx):
         moves = decode_moves(np.asarray([action_idx]), self.side)
         self.apply_moves(moves)
         new_state = self.get_observation()
-        return new_state, get_reward(self.state)
+        return new_state.copy(), get_reward(self.state)
 
 
 

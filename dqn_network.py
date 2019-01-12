@@ -41,17 +41,13 @@ def argmax(a):
     idx = [index for index, value in enumerate(a) if value == v]
     return random.choice(idx)
 
-def epsilon_control_algo(eps_start, eps_end, episode_max, episode):
-    eps = eps_start + (eps_end - eps_start) * (episode)/episode_max
-    lower = min(eps_start, eps_end)
-    upper = max(eps_start, eps_end)
-    return max(min(eps, upper), lower)
-
-def train_op(dqn, X, y, alpha):
+def train_op(dqn, X, y, alpha, n_epochs):
     model = dqn.model
     sgd = optimizers.SGD(lr=alpha)
+    adam = optimizers.Adam(lr=alpha, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
     model.compile(loss='categorical_crossentropy', optimizer=sgd)
-    model.fit(X, y, epochs=1, verbose=1, shuffle=True)
+    #model.compile(loss='categorical_crossentropy', optimizer=adam)
+    model.fit(X, y, epochs=n_epochs, verbose=0, shuffle=True)
 
 def policy(dqn, obs, epsilon=1):
     # Epsilon greedy policy implementation
@@ -101,14 +97,18 @@ def evaluate(model, test_X, nc):
 
 def get_NN(input_shape, n_actions):
     ## Set Parameters ##
-    dense_layer_size = 128
-    dropout = 0.5
+    dense_layer_size = 256
+    dropout = 0.2
     ####################
 
     model = Sequential()
 
     # Fully connected layers
     model.add(Dense(dense_layer_size, input_shape=(input_shape,), activation='relu'))
+    model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size,  activation='relu'))
+    model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size, activation='relu'))
     model.add(Dropout(dropout))
     model.add(Dense(n_actions, activation='softmax'))
     return model
@@ -119,13 +119,13 @@ def accuracy(true, pred):
     x = np.equal(a, b)
     return np.mean(x)
 
-def train_epoch(model, train_X, train_y, valid_X, valid_y, n_epochs=1, batch_size=-1):
-    if batch_size == -1:
-        batch_size = train_X.shape[0]
-
-    model.fit(train_X, train_y, epochs=n_epochs, verbose=1, batch_size=batch_size)
-    acc = accuracy(valid_y, policy(model, valid_X, epsilon=1))
-    print("test accuracy = " + str(acc))
+# def train_epoch(model, train_X, train_y, valid_X, valid_y, n_epochs=1, batch_size=-1):
+#     if batch_size == -1:
+#         batch_size = train_X.shape[0]
+#
+#     model.fit(train_X, train_y, epochs=n_epochs, verbose=0, batch_size=batch_size)
+#     acc = accuracy(valid_y, policy(model, valid_X, epsilon=1))
+#     print("test accuracy = " + str(acc))
 
 class dqn_network:
     def __init__(self, n_inputs, n_actions):
