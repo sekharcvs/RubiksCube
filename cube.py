@@ -352,6 +352,45 @@ def rotate_cube(state, axis, turns):
         state = rotate_turn_counterclockwise(state, axis)
     return state
 
+def return_all_rotations(state):
+    states_list = [state]
+    tempState = state.copy()
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 0, turns)
+        states_list += [tempState]
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 1, 1)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 2, turns)
+        states_list += [tempState]
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 1, 2)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 0, turns)
+        states_list += [tempState]
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 1, 3)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 2, turns)
+        states_list += [tempState]
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 2, 1)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 1, turns)
+        states_list += [tempState]
+
+    tempState = state1.copy()
+    tempState = rotate_cube(tempState, 2, 3)
+    for turns in range(4):
+        tempState = rotate_cube(tempState, 1, turns)
+        states_list += [tempState]
+
+    return states_list
+
 
 # def update_moves_states(state, moves_list, states_list, axis, offset, direction):
 #     temp = [np.asarray([axis,offset,direction])]
@@ -580,8 +619,8 @@ def moves_shuffle(state, side, moves):
         offset = moves[i, 1].astype(np.int)
         direction = moves[i, 2].astype(np.int)
         #state_ = state.copy()
-        #state = move(state_, side, axis, offset, direction)
-    return move(state, side, axis, offset, direction)
+        state = move(state, side, axis, offset, direction)
+    return state
 
 # def moves_shuffle(state, side, moves, moves_list, states_list):
 #     n_moves = moves.shape[0]
@@ -689,6 +728,9 @@ class CubeObject:
     # Q-Learning specific functions
     def get_observation(self):
         return np.reshape(self.state, -1).copy()
+    def set_observation(self, obs):
+        state = np.reshape(obs, (6, self.side, self.side))
+        return self.set_state(state)
     def is_terminal_state(self):
         return isSolved(self.state)
     def apply_action(self, action_idx):
