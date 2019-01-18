@@ -2,6 +2,7 @@ import dqn_network
 import cube
 import numpy as np
 import evaluate_model
+import random
 
 ## Random Notes:
 # We are using TD learning
@@ -53,12 +54,15 @@ EPSILON_START = 0 # Explore 50% of the time
 EPSILON_END = 0.1
 # Greedy policy
 N_EPISODES = 2400000 # Total Number of episodes to be run
-TRAIN_PER_EPISODES = 2000 # Training epoch run after collecting this many episodic data
+TRAIN_PER_EPISODES = 500 # Training epoch run after collecting this many episodic data
 N_EPOCHS_PER_UPDATE = 10
 N_ENTRIES_TRAIN_MAX_FACTOR = 1
 
+RANDOM_PERC_TRAIN_FAILED_EPISODES = 50 # Percentage of episodes to train randomly on failed episodes
+N_FAILED_EPISODES_MAX = 1000 # We explicitly train on failed episodes and maintain a queue of N_FAILED_EPISODES_MAX failed episodes
 
-LEARNING_RATE = 0.0001 # Q-Network trainer learning_rate
+
+LEARNING_RATE = 0.01 # Q-Network trainer learning_rate
 ALPHA_MAX = LEARNING_RATE * 2
 ALPHA_MIN = 1e-5
 
@@ -121,13 +125,28 @@ def alpha_control_algo(alpha, alpha_max, alpha_min, last_metric, last_last_metri
 
     return max(min(alpha1, alpha_max), alpha_min)
 
-def run_episode(q_network_obj, epsilon=1):
+def if_train_failed_episode_randomly():
+    # Set Parameters ##
+    random_percentage = RANDOM_PERC_TRAIN_FAILED_EPISODES
+    ###################
+
+    if random.random() > random_percentage/100.0:
+        return False
+    else:
+        return True
+
+def run_episode(q_network_obj, epsilon=1, init_obs=-1):
     # Set Parameters ##
     n_steps_episode_max = N_STEPS_EPISODE_MAX
     ###################
 
 
     env = reset_env()
+
+    if init_obs is not -1:
+        # Train on particular observations
+        env.set_observation(init_obs)
+
     obs = env.get_observation()
 
     steps_taken = 0
@@ -260,6 +279,7 @@ def run():
     train_per_episodes = TRAIN_PER_EPISODES
     n_entries_train_max_factor = N_ENTRIES_TRAIN_MAX_FACTOR
     n_steps_episode_max = N_STEPS_EPISODE_MAX
+    n_failed_episode_list_max = N_FAILED_EPISODES_MAX
 
     epsilon_start = EPSILON_START
     epsilon_end = EPSILON_END
@@ -288,7 +308,7 @@ def run():
         dqn_network_obj = dqn_network.load_network(load_network_name)
 
     dqn_network.save_network(dqn_network_obj, 'temp_validation_network.pickle')
-    best_solved_percentage = evaluate_model.run('temp_validation_network.pickle')
+    best_solved_percentage, failed_obs_list = evaluate_model.run('temp_validation_network.pickle')
     solved_percentage = best_solved_percentage
     last_solved_percentage = solved_percentage
     epsilon = epsilon_start
@@ -309,7 +329,10 @@ def run():
                 # Reset training data every train_per_episodes episodes including 0th episode
             #    state_action_reward_list = []
 
-            state_action_reward_list += run_episode(dqn_network_obj, epsilon)
+            if if_train_failed_episode_randomly() is True and len(failed_obs_list) > 0:
+                state_action_reward_list += run_episode(dqn_network_obj, epsilon, init_obs=random.choice(failed_obs_list))
+            else:
+                state_action_reward_list += run_episode(dqn_network_obj, epsilon)
 
             if len(state_action_reward_list) > n_entries_train_max:
                 diff = len(state_action_reward_list) - n_entries_train_max
@@ -326,7 +349,13 @@ def run():
 
                 dqn_network.save_network(dqn_network_obj, 'temp_validation_network.pickle')
                 last_solved_percentage = solved_percentage
-                solved_percentage = evaluate_model.run('temp_validation_network.pickle')
+                solved_percentage, failed_obs_list_temp = evaluate_model.run('temp_validation_network.pickle')
+                failed_obs_list += failed_obs_list_temp
+
+                # Keep a max queue of failed episodes to train on
+                if len(failed_obs_list) > n_failed_episode_list_max:
+                    diff = len(failed_obs_list) - n_failed_episode_list_max
+                    failed_obs_list = failed_obs_list[diff::]
                 print("episode: {}, epsilon: {}, alpha: {}, solved_percentage: {}, best_solved_percentage until now: {}".format(episode, epsilon, alpha,
                                                                                           solved_percentage, best_solved_percentage))
 

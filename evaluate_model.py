@@ -27,6 +27,8 @@ def run(model_name):
     total_states = 0
     seen_states = 0
 
+    obs_list = []
+
     for i in range(N_CUBES):
         # NOTE: For testing more moves away cubes, just systematically generate rotations and moves from solved state or store cube states
         if n_moves_high > n_moves_low:
@@ -37,6 +39,8 @@ def run(model_name):
         n_moves_solve_max = min(N_MOVES_SOLVE_MAX, n_moves + 2)
         # Create a fresh cube object with randomly initialized state
         C1 = cube.CubeObject(dim=side, n_moves=n_moves)
+
+        obs_init = C1.get_observation()
 
 
         total_count[n_moves - n_moves_low] = total_count[n_moves - n_moves_low] + 1
@@ -59,6 +63,8 @@ def run(model_name):
 
         if cube.isSolved(C1.state) is True:
             solved_count[n_moves - n_moves_low] = solved_count[n_moves - n_moves_low] + 1
+        else:
+            obs_list += [obs_init]
 
     #print("Results:\nPercentage of seen states: "+str((100.0 * seen_states) / total_states))
     for i in range(n_moves_low, n_moves_high):
@@ -67,7 +73,7 @@ def run(model_name):
 
     percentage_solved = (100.0 * sum(solved_count)) / sum(total_count)
     print("Results:\nPercentage Solved overall: "+str(percentage_solved))
-    return percentage_solved
+    return percentage_solved, obs_list
 
 
 if __name__ == "__main__":
