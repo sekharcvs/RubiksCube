@@ -54,15 +54,15 @@ EPSILON_START = 0 # Explore 50% of the time
 EPSILON_END = 0.1
 # Greedy policy
 N_EPISODES = 2400000 # Total Number of episodes to be run
-TRAIN_PER_EPISODES = 500 # Training epoch run after collecting this many episodic data
+TRAIN_PER_EPISODES = 1000 # Training epoch run after collecting this many episodic data
 N_EPOCHS_PER_UPDATE = 10
 N_ENTRIES_TRAIN_MAX_FACTOR = 1
 
-RANDOM_PERC_TRAIN_FAILED_EPISODES = 50 # Percentage of episodes to train randomly on failed episodes
-N_FAILED_EPISODES_MAX = 1000 # We explicitly train on failed episodes and maintain a queue of N_FAILED_EPISODES_MAX failed episodes
+RANDOM_PERC_TRAIN_FAILED_EPISODES = 70 # Percentage of episodes to train randomly on failed episodes
+N_FAILED_EPISODES_MAX = 10000 # We explicitly train on failed episodes and maintain a queue of N_FAILED_EPISODES_MAX failed episodes
 
 
-LEARNING_RATE = 0.01 # Q-Network trainer learning_rate
+LEARNING_RATE = 0.00014 # Q-Network trainer learning_rate
 ALPHA_MAX = LEARNING_RATE * 2
 ALPHA_MIN = 1e-5
 
@@ -330,7 +330,7 @@ def run():
             #    state_action_reward_list = []
 
             if if_train_failed_episode_randomly() is True and len(failed_obs_list) > 0:
-                state_action_reward_list += run_episode(dqn_network_obj, epsilon, init_obs=random.choice(failed_obs_list))
+                state_action_reward_list += run_episode(dqn_network_obj, epsilon=0.25, init_obs=random.choice(failed_obs_list))
             else:
                 state_action_reward_list += run_episode(dqn_network_obj, epsilon)
 
