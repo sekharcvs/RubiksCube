@@ -41,7 +41,7 @@ import random
 
 PRINT_DIAG = True
 
-LOAD_NETWORK = True
+LOAD_NETWORK = False
 SAVE_NETWORK = True
 UPDATE_NETWORK = True
 

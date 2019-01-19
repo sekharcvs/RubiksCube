@@ -14,7 +14,7 @@ def run(model_name):
     # Evaluation
 
     side = SIDE
-    n_moves_low = N_MOVES_AWAY_START_MAX
+    n_moves_low = 1
     n_moves_high = N_MOVES_AWAY_START_MAX
 
     n_moves_solve_max = N_MOVES_SOLVE_MAX

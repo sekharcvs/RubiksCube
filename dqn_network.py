@@ -110,7 +110,22 @@ def get_NN(input_shape, n_actions):
     model.add(Dropout(dropout))
     model.add(Dense(dense_layer_size, activation='relu'))
     model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size, activation='relu'))
+    model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size, activation='relu'))
+    model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size, activation='relu'))
+    model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size, activation='relu'))
+    model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size, activation='relu'))
+    model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size, activation='relu'))
+    model.add(Dropout(dropout))
+    model.add(Dense(dense_layer_size, activation='relu'))
+    model.add(Dropout(dropout))
     model.add(Dense(n_actions, activation='softmax'))
+
     return model
 
 def accuracy(true, pred):
